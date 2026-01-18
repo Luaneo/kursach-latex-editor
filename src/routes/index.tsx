@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { LatexEditor } from '@/components/latex-editor'
 import { ModeToggle } from '@/components/mode-toggle'
@@ -13,7 +14,7 @@ import {
   CardContent,
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { FileText, BookOpen, Code, Keyboard, Link, Database } from 'lucide-react'
+import { FileText, BookOpen, Code, Keyboard, Link, Database, FileDown, Loader2 } from 'lucide-react'
 
 export const Route = createFileRoute('/')({ component: App })
 
@@ -82,10 +83,66 @@ function App() {
   const [latexContent, setLatexContent] = useState(defaultLatexContent)
   const [bibtexContent, setBibtexContent] = useState(defaultBibtexContent)
   const [activeTab, setActiveTab] = useState<'latex' | 'bibtex'>('latex')
+  const [isCompiling, setIsCompiling] = useState(false)
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [compileError, setCompileError] = useState<string | null>(null)
   const { theme } = useTheme()
 
   // Determine Monaco editor theme based on current theme
   const editorTheme = theme === 'light' ? 'light' : 'vs-dark'
+
+  const handleCompile = async () => {
+    if (activeTab !== 'latex') return
+
+    setIsCompiling(true)
+    setCompileError(null)
+    setPdfUrl(null)
+
+    try {
+      const response = await fetch('/api/compile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ latex: latexContent }),
+      })
+
+      if (!response.ok) {
+        let errorMessage = 'Ошибка компиляции LaTeX'
+        try {
+          const contentType = response.headers.get('content-type')
+          if (contentType?.includes('application/json')) {
+            const errorData = await response.json()
+            errorMessage = errorData.message || errorData.error || errorMessage
+          } else {
+            const errorText = await response.text()
+            errorMessage = errorText || errorMessage
+          }
+        } catch {
+          // If parsing fails, use default message
+        }
+        throw new Error(errorMessage)
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      setPdfUrl(url)
+    } catch (error: any) {
+      setCompileError(error.message || 'Произошла ошибка при компиляции')
+      console.error('Compilation error:', error)
+    } finally {
+      setIsCompiling(false)
+    }
+  }
+
+  // Clean up PDF URL when component unmounts
+  React.useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl)
+      }
+    }
+  }, [pdfUrl])
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -132,6 +189,29 @@ function App() {
           <Badge variant="secondary">
             {activeTab === 'latex' ? 'Редактирование документа' : 'Редактирование библиографии'}
           </Badge>
+          {activeTab === 'latex' && (
+            <>
+              <Separator orientation="vertical" className="h-6 mx-2" />
+              <Button
+                onClick={handleCompile}
+                disabled={isCompiling}
+                size="sm"
+                className="ml-auto"
+              >
+                {isCompiling ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Компиляция...
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="size-3.5" />
+                    Скомпилировать в PDF
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Editor container */}
@@ -157,6 +237,32 @@ function App() {
             )}
           </CardContent>
         </Card>
+
+        {/* PDF Preview */}
+        {(pdfUrl || compileError) && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Результат компиляции</CardTitle>
+              {compileError && (
+                <CardDescription className="text-destructive">
+                  {compileError}
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent>
+              {pdfUrl && (
+                <div className="w-full border rounded-lg overflow-hidden bg-muted/50">
+                  <iframe
+                    src={pdfUrl}
+                    className="w-full"
+                    style={{ height: '600px', border: 'none' }}
+                    title="PDF Preview"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Help section */}
         <div className="mb-6">
