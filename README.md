@@ -2,6 +2,13 @@
 
 Редактор LaTeX с IntelliSense и возможностью компиляции в PDF.
 
+## Структура проекта
+
+Проект разделен на два независимых модуля:
+
+- **`frontend/`** - TanStack Start приложение (React + TypeScript)
+- **`backend/`** - Nitro API сервер для компиляции LaTeX
+
 ## Возможности
 
 - ✨ Редактор LaTeX с автодополнением (IntelliSense)
@@ -36,23 +43,52 @@ sudo apt-get install texlive-latex-base texlive-latex-extra
 
 ## Установка и запуск
 
+### Установка всех зависимостей
+
 ```bash
-# Установка зависимостей
-pnpm install
+# Установка зависимостей для всех проектов
+pnpm install:all
 
-# Запуск в режиме разработки
+# Или установка по отдельности
+cd frontend && pnpm install
+cd ../backend && pnpm install
+```
+
+### Запуск в режиме разработки
+
+**Запуск обоих серверов одновременно:**
+```bash
 pnpm dev
+```
 
-# Сборка для продакшена
+Это запустит:
+- Frontend на `http://localhost:3000`
+- Backend API на `http://localhost:3001`
+
+**Запуск по отдельности:**
+
+```bash
+# Только фронтенд
+pnpm dev:frontend
+
+# Только бэкенд
+pnpm dev:backend
+```
+
+### Сборка для продакшена
+
+```bash
+# Сборка обоих проектов
 pnpm build
 
-# Просмотр собранного проекта
-pnpm preview
+# Или по отдельности
+pnpm build:frontend
+pnpm build:backend
 ```
 
 ## API Endpoint
 
-### POST `/api/compile`
+### POST `http://localhost:3001/api/compile`
 
 Компилирует LaTeX код в PDF.
 
@@ -69,15 +105,42 @@ pnpm preview
 
 ## Использование
 
-1. Введите или отредактируйте LaTeX код в редакторе
-2. Нажмите кнопку "Скомпилировать в PDF"
-3. Дождитесь завершения компиляции
-4. Просмотрите результат в окне предпросмотра PDF
+1. Запустите оба сервера: `pnpm dev`
+2. Откройте `http://localhost:3000` в браузере
+3. Введите или отредактируйте LaTeX код в редакторе
+4. Нажмите кнопку "Скомпилировать в PDF"
+5. Дождитесь завершения компиляции
+6. Просмотрите результат в окне предпросмотра PDF
 
 ## Технологии
 
-- [TanStack Start](https://tanstack.com/start) - Full-stack React framework
-- [shadcn/ui](https://ui.shadcn.com/) - UI компоненты
-- [Monaco Editor](https://microsoft.github.io/monaco-editor/) - Редактор кода
-- [Nitro](https://nitro.unjs.io/) - Backend framework
-- LaTeX - Система верстки документов
+- **Frontend:**
+  - [TanStack Start](https://tanstack.com/start) - Full-stack React framework
+  - [shadcn/ui](https://ui.shadcn.com/) - UI компоненты
+  - [Monaco Editor](https://microsoft.github.io/monaco-editor/) - Редактор кода
+
+- **Backend:**
+  - [Nitro](https://nitro.unjs.io/) - Backend framework
+  - LaTeX - Система верстки документов
+
+## Разработка
+
+### Структура проекта
+
+```
+kursach/
+├── frontend/          # TanStack Start приложение
+│   ├── src/          # Исходный код
+│   ├── public/       # Статические файлы
+│   └── package.json  # Зависимости фронтенда
+│
+├── backend/          # Nitro API сервер
+│   ├── server/       # API endpoints
+│   └── package.json  # Зависимости бэкенда
+│
+└── package.json      # Корневой package.json для управления
+```
+
+### CORS
+
+Backend настроен с CORS для работы с фронтендом. В продакшене настройте CORS для вашего домена.
